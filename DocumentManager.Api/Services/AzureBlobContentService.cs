@@ -19,7 +19,7 @@ namespace DocumentManager.Api.Services
 
             await blockBlob.UploadFromStreamAsync(stream);
 
-            return blockBlob?.Uri?.ToString();
+            return blockBlob.Uri.ToString();
         }
 
         public async Task DeleteFile(string filePath)

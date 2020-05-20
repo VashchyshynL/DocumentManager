@@ -7,6 +7,7 @@ using DocumentManager.Api.Models;
 using DocumentManager.Api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace DocumentManager.Api.Controllers
 {
@@ -18,11 +19,15 @@ namespace DocumentManager.Api.Controllers
         private readonly IContentService _contentService;
         private readonly IFileValidator _fileValidator;
 
-        public DocumentsController(IDbService dbService, IContentService contentService, IFileValidator fileValidator)
+        private ILogger<DocumentsController> _logger;
+
+        public DocumentsController(IDbService dbService, IContentService contentService, IFileValidator fileValidator, ILogger<DocumentsController> logger)
         {
             _dbService = dbService;
             _contentService = contentService;
             _fileValidator = fileValidator;
+
+            _logger = logger;
         }
 
         [HttpGet]
@@ -40,7 +45,10 @@ namespace DocumentManager.Api.Controllers
 
             var document = await _dbService.GetDocumentByIdAsync(id);
             if (document == null)
+            {
+                _logger.LogWarning($"Document with Id: '{id}' not found");
                 return NotFound();
+            }
             
             return Ok(document);
         }
@@ -66,6 +74,7 @@ namespace DocumentManager.Api.Controllers
             using (var stream = file.OpenReadStream())
             {
                 fileLocation = await _contentService.SaveFile(stream, id + Path.GetExtension(file.FileName));
+                _logger.LogInformation($"File '{file.FileName}' successfully saved into storage location: '{fileLocation}'");
             }
 
             var document = new Document {
@@ -76,6 +85,7 @@ namespace DocumentManager.Api.Controllers
             };
 
             await _dbService.AddDocumentAsync(document);
+            _logger.LogInformation($"Document with Id: '{id}' and file name: '{file.FileName}' successfully stored");
 
             return CreatedAtAction("Get", new { id = document.Id }, document);
         }
@@ -88,11 +98,16 @@ namespace DocumentManager.Api.Controllers
 
             var document = await _dbService.GetDocumentByIdAsync(id);
             if (document == null)
+            {
+                _logger.LogWarning($"Document with Id: '{id}' not found");
                 return NotFound();
+            }
 
             await _dbService.DeleteDocumentAsync(id);
+            _logger.LogInformation($"Document with Id: '{id}' deleted from DB");
 
             await _contentService.DeleteFile(Path.GetFileName(document.Location));
+            _logger.LogInformation($"Document with Id: '{id}' deleted from storage location: '{document.Location}'");
 
             return NoContent();
         }
