@@ -53,12 +53,14 @@ namespace DocumentManager.Api.Controllers
                 return BadRequest();
 
             if (!_fileValidator.IsValidExtension(file.FileName))
-                return BadRequest($"File should have '{_fileValidator.Extension}' extension");
+                ModelState.AddModelError(nameof(file), $"File should have '{_fileValidator.Extension}' extension");
 
             if (_fileValidator.IsExceedsMaxSize(file.Length))
-                return BadRequest($"File should contain less than '{_fileValidator.MaxFileSizeInBytes}' bytes");
+                ModelState.AddModelError(nameof(file), $"File size should not be greater than '{_fileValidator.MaxFileSizeInBytes}' bytes");
 
-            
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var id = Guid.NewGuid().ToString();
             string fileLocation;
             using (var stream = file.OpenReadStream())
