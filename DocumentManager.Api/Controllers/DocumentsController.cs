@@ -8,9 +8,14 @@ using DocumentManager.Api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using AutoMapper;
+using DocumentManager.Api.Dtos;
 
 namespace DocumentManager.Api.Controllers
 {
+    /// <summary>
+    /// Controller for handling documents management
+    /// </summary>
     [Route("api/documents")]
     [ApiController]
     public class DocumentsController : ControllerBase
@@ -19,27 +24,36 @@ namespace DocumentManager.Api.Controllers
         private readonly IContentService _contentService;
         private readonly IFileValidator _fileValidator;
 
+        private IMapper _mapper;
         private ILogger<DocumentsController> _logger;
 
-        public DocumentsController(IDbService dbService, IContentService contentService, IFileValidator fileValidator, ILogger<DocumentsController> logger)
+        public DocumentsController(IDbService dbService, IContentService contentService, IFileValidator fileValidator, IMapper mapper, ILogger<DocumentsController> logger)
         {
             _dbService = dbService;
             _contentService = contentService;
             _fileValidator = fileValidator;
 
+            _mapper = mapper;
             _logger = logger;
         }
 
+        /// <summary>
+        /// Action method for retrieving all pdf documents which are in the system
+        /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Document>>> GetAll()
+        public async Task<ActionResult<IEnumerable<DocumentDto>>> GetAll()
         {
             var documents = await _dbService.GetDocumentsAsync();
 
-            return Ok(documents);
+            return Ok(_mapper.Map<IEnumerable<DocumentDto>>(documents));
         }
 
+        /// <summary>
+        /// Action method for retrieving particular document by it's Id
+        /// </summary>
+        /// <param name="id">Id of the document</param>
         [HttpGet("{id}")]
-        public async Task<ActionResult> Get(string id)
+        public async Task<ActionResult<DocumentDto>> Get(string id)
         {
             if (string.IsNullOrWhiteSpace(id))
                 return BadRequest();
@@ -51,9 +65,13 @@ namespace DocumentManager.Api.Controllers
                 return NotFound();
             }
             
-            return Ok(document);
+            return Ok(_mapper.Map<DocumentDto>(document));
         }
 
+        /// <summary>
+        /// Action method for uploading document into system 
+        /// </summary>
+        /// <param name="file">Uploading file</param>
         [HttpPost]
         [Route("upload")]
         public async Task<IActionResult> Upload(IFormFile file)
@@ -89,6 +107,10 @@ namespace DocumentManager.Api.Controllers
             return CreatedAtAction("Get", new { id = document.Id }, document);
         }
 
+        /// <summary>
+        /// Action method for deleting particular document by it's Id
+        /// </summary>
+        /// <param name="id">Id of the document</param>
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(string id)
         {

@@ -1,4 +1,5 @@
-﻿using DocumentManager.Api.Helpers;
+﻿using AutoMapper;
+using DocumentManager.Api.Helpers;
 using DocumentManager.Api.Options;
 using DocumentManager.Api.Services;
 using Microsoft.AspNetCore.Builder;
@@ -26,6 +27,7 @@ namespace DocumentManager.Api
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddAutoMapper(typeof(Startup));
             RegisterTypes(services);
 
             services.AddSwaggerGen(c => c.SwaggerDoc("v1", new Info()));
