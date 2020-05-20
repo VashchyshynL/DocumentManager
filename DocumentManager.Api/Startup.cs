@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -16,16 +17,16 @@ namespace DocumentManager.Api
 {
     public class Startup
     {
-        public IConfiguration Configuration { get; }
+        private readonly IConfiguration _configuration;
 
         public Startup(IConfiguration configuration)
         {
-            Configuration = configuration;
+            _configuration = configuration;
         }
 
         public void ConfigureServices(IServiceCollection services)
         {
-            RegisterTypes(services, Configuration);
+            RegisterTypes(services);
 
             services.AddSwaggerGen(c => c.SwaggerDoc("v1", new Info()));
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
@@ -45,28 +46,37 @@ namespace DocumentManager.Api
             app.UseMvc();
         }
 
-        private void RegisterTypes(IServiceCollection services, IConfiguration configuration)
+        private void RegisterTypes(IServiceCollection services)
         {
-            var dbOptions = configuration.GetSection("CosmosDb").Get<DbOptions>();
-            services.AddSingleton<IDbService>(InitializeCosmosDbServiceInstanceAsync(dbOptions).GetAwaiter().GetResult());
+            services.AddSingleton<IDbService>(serviceProvider => {
+                var dbOptions = _configuration.GetSection("CosmosDb").Get<DbOptions>();
+                var dbServiceLogger = serviceProvider.GetService<ILogger<CosmosDbService>>();
 
-            var azureBlobOptions = configuration.GetSection("AzureBlobStorage").Get<AzureBlobOptions>();
-            services.AddSingleton<IContentService>(InitializeAzureBlobServiceInstanceAsync(azureBlobOptions).GetAwaiter().GetResult());
+                return InitializeCosmosDbServiceInstanceAsync(dbOptions, dbServiceLogger).GetAwaiter().GetResult();
+            });
+            
+            services.AddSingleton<IContentService>(serviceProvider =>
+            {
+                var azureBlobOptions = _configuration.GetSection("AzureBlobStorage").Get<AzureBlobOptions>();
+                var azureBlobServiceLogger = serviceProvider.GetService<ILogger<AzureBlobContentService>>();
+
+                return InitializeAzureBlobServiceInstanceAsync(azureBlobOptions, azureBlobServiceLogger).GetAwaiter().GetResult();
+            });
 
             services.AddSingleton<IFileValidator, PdfFileValidator>();
         }
 
-        private static async Task<CosmosDbService> InitializeCosmosDbServiceInstanceAsync(DbOptions dbOptions)
+        private static async Task<CosmosDbService> InitializeCosmosDbServiceInstanceAsync(DbOptions dbOptions, ILogger<CosmosDbService> logger)
         {
             var clientBuilder = new Microsoft.Azure.Cosmos.Fluent.CosmosClientBuilder(dbOptions.Endpoint, dbOptions.Key);
             var client = clientBuilder.WithConnectionModeDirect().Build();
             var database = await client.CreateDatabaseIfNotExistsAsync(dbOptions.Database);
             var response = await database.Database.CreateContainerIfNotExistsAsync(dbOptions.Container, "/id");
 
-            return new CosmosDbService(response.Container);
+            return new CosmosDbService(response.Container, logger);
         }
 
-        private static async Task<AzureBlobContentService> InitializeAzureBlobServiceInstanceAsync(AzureBlobOptions options)
+        private static async Task<AzureBlobContentService> InitializeAzureBlobServiceInstanceAsync(AzureBlobOptions options, ILogger<AzureBlobContentService> logger)
         {
             var credentials = new StorageCredentials(options.Name, options.Key);
             var storageAccount = new CloudStorageAccount(credentials, true);
@@ -74,7 +84,7 @@ namespace DocumentManager.Api
             var container = blobClient.GetContainerReference(options.Container);
             await container.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Blob, new BlobRequestOptions(), new OperationContext());
 
-            return new AzureBlobContentService(container);
+            return new AzureBlobContentService(container, logger);
         }
     }
 }

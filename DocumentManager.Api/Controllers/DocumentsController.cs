@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace DocumentManager.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/documents")]
     [ApiController]
     public class DocumentsController : ControllerBase
     {
@@ -34,6 +34,7 @@ namespace DocumentManager.Api.Controllers
         public async Task<ActionResult<IEnumerable<Document>>> GetAll()
         {
             var documents = await _dbService.GetDocumentsAsync();
+
             return Ok(documents);
         }
 
@@ -54,7 +55,7 @@ namespace DocumentManager.Api.Controllers
         }
 
         [HttpPost]
-        [Route("Upload")]
+        [Route("upload")]
         public async Task<IActionResult> Upload(IFormFile file)
         {
             if(file == null)
@@ -74,7 +75,6 @@ namespace DocumentManager.Api.Controllers
             using (var stream = file.OpenReadStream())
             {
                 fileLocation = await _contentService.SaveFile(stream, id + Path.GetExtension(file.FileName));
-                _logger.LogInformation($"File '{file.FileName}' successfully saved into storage location: '{fileLocation}'");
             }
 
             var document = new Document {
@@ -85,7 +85,6 @@ namespace DocumentManager.Api.Controllers
             };
 
             await _dbService.AddDocumentAsync(document);
-            _logger.LogInformation($"Document with Id: '{id}' and file name: '{file.FileName}' successfully stored");
 
             return CreatedAtAction("Get", new { id = document.Id }, document);
         }
@@ -107,7 +106,6 @@ namespace DocumentManager.Api.Controllers
             _logger.LogInformation($"Document with Id: '{id}' deleted from DB");
 
             await _contentService.DeleteFile(Path.GetFileName(document.Location));
-            _logger.LogInformation($"Document with Id: '{id}' deleted from storage location: '{document.Location}'");
 
             return NoContent();
         }
