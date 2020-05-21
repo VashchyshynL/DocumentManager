@@ -2,7 +2,6 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using DocumentManager.Api.Helpers;
 using DocumentManager.Api.Models;
 using DocumentManager.Api.Services;
 using Microsoft.AspNetCore.Http;
@@ -10,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
 using DocumentManager.Api.Dtos;
+using DocumentManager.Api.Validators;
 
 namespace DocumentManager.Api.Controllers
 {
@@ -22,16 +22,14 @@ namespace DocumentManager.Api.Controllers
     {
         private readonly IDbService _dbService;
         private readonly IContentService _contentService;
-        private readonly IFileValidator _fileValidator;
 
         private IMapper _mapper;
         private ILogger<DocumentsController> _logger;
 
-        public DocumentsController(IDbService dbService, IContentService contentService, IFileValidator fileValidator, IMapper mapper, ILogger<DocumentsController> logger)
+        public DocumentsController(IDbService dbService, IContentService contentService, IMapper mapper, ILogger<DocumentsController> logger)
         {
             _dbService = dbService;
             _contentService = contentService;
-            _fileValidator = fileValidator;
 
             _mapper = mapper;
             _logger = logger;
@@ -74,19 +72,10 @@ namespace DocumentManager.Api.Controllers
         /// <param name="file">Uploading file</param>
         [HttpPost]
         [Route("upload")]
-        public async Task<IActionResult> Upload(IFormFile file)
+        public async Task<IActionResult> Upload([PdfFormFile(5)] IFormFile file)
         {
             if(file == null)
                 return BadRequest();
-
-            if (!_fileValidator.IsValidExtension(file.FileName))
-                ModelState.AddModelError(nameof(file), $"File should have '{_fileValidator.Extension}' extension");
-
-            if (_fileValidator.IsExceedsMaxSize(file.Length))
-                ModelState.AddModelError(nameof(file), $"File size should not be greater than '{_fileValidator.MaxFileSizeInBytes}' bytes");
-
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
 
             var id = Guid.NewGuid().ToString();
             string fileLocation;

@@ -64,8 +64,6 @@ namespace DocumentManager.Api
 
                 return InitializeAzureBlobServiceInstanceAsync(azureBlobOptions, azureBlobServiceLogger).GetAwaiter().GetResult();
             });
-
-            services.AddSingleton<IFileValidator, PdfFileValidator>();
         }
 
         private static async Task<CosmosDbService> InitializeCosmosDbServiceInstanceAsync(DbOptions dbOptions, ILogger<CosmosDbService> logger)
