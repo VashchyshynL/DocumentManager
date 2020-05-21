@@ -2,7 +2,7 @@
 using DocumentManager.Api.Dtos;
 using DocumentManager.Api.Models;
 
-namespace DocumentManager.Api.Helpers
+namespace DocumentManager.Api.Mappers
 {
     /// <summary>
     /// Class for configuring related object mappings

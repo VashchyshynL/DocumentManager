@@ -35,7 +35,7 @@ namespace DocumentManager.Api.Services
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, $"Error during saving file '{fileName}' to Azure Blob Storage container: '{_container.Name}'");
+                _logger.LogError(ex, $"Error during saving file '{fileName}' to Azure Blob Storage container: '{_container.Name}'");
                 throw ex;
             }
         }

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using DocumentManager.Api.Middleware;
 using DocumentManager.Api.Options;
 using DocumentManager.Api.Services;
 using Microsoft.AspNetCore.Builder;
@@ -38,7 +39,7 @@ namespace DocumentManager.Api
             if (env.IsDevelopment())
                 app.UseDeveloperExceptionPage();
             else
-                app.UseHsts();
+                app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             app.UseSwagger();
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Document Manager"));

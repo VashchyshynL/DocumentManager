@@ -140,7 +140,7 @@ namespace DocumentManager.Api.Controllers
 
             var oldPosition = document.Position;
             if (oldPosition == position)
-                return Ok();
+                return NoContent();
 
             var documentsCount = _dbService.GetDocumentsCount();
             if (position > documentsCount)
