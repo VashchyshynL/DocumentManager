@@ -24,5 +24,10 @@
         /// Container name
         /// </summary>
         public string Container { get; set; }
+
+        /// <summary>
+        /// Partition key
+        /// </summary>
+        public string PartitionKey { get; set; }
     }
 }

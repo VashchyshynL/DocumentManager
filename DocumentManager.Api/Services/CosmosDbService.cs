@@ -10,27 +10,35 @@ namespace DocumentManager.Api.Services
     public class CosmosDbService : IDbService
     {
         private Container _container;
+        private readonly string _partitionKey;
         private readonly ILogger<CosmosDbService> _logger;
 
-        public CosmosDbService(Container container, ILogger<CosmosDbService> logger)
+        public CosmosDbService(Container container, string partitionKey, ILogger<CosmosDbService> logger)
         {
             _container = container;
+            _partitionKey = partitionKey;
             _logger = logger;
+        }
+
+        public int GetDocumentsCount()
+        {
+            try
+            {
+                return _container.GetItemLinqQueryable<Document>(true).Count();
+            }
+            catch (CosmosException ex)
+            {
+                _logger.LogError(ex, $"Error of retrieving documents count from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
+                throw ex;
+            }
         }
 
         public async Task<IEnumerable<Document>> GetDocumentsAsync()
         {
             try
             {
-                _logger.LogInformation($"Retrieving all documents from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}' started");
-
-
-                var documents = await Task.Factory.StartNew<IEnumerable<Document>>(
-                    () => _container.GetItemLinqQueryable<Document>(true));
-
-                _logger.LogInformation($"Retrieving all documents from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}' finished");
-
-                return documents;
+                return await Task.Factory.StartNew<IEnumerable<Document>>(
+                    () => _container.GetItemLinqQueryable<Document>(true).OrderBy(d => d.Position));
             }
             catch (CosmosException ex)
             {
@@ -43,22 +51,18 @@ namespace DocumentManager.Api.Services
         {
             try
             {
-                _logger.LogInformation($"Retrieving document by Id: '{id}' from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}' started");
-
-                var response = await _container.ReadItemAsync<Document>(id, new PartitionKey(id));
-
-                _logger.LogInformation($"Retrieving document by Id: '{id}' from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}' finished");
+                var response = await _container.ReadItemAsync<Document>(id, new PartitionKey(_partitionKey));
 
                 return response?.Resource;
             }
             catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                _logger.LogWarning(ex, $"Document with Id: '{id}' not found in CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
+                _logger.LogWarning(ex, $"Document '{id}' not found in CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
                 return null;
             }
             catch (CosmosException ex)
             {
-                _logger.LogError(ex, $"Error of retrieving document with Id: '{id}' from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
+                _logger.LogError(ex, $"Error of retrieving document '{id}' from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
                 throw ex;
             }
         }
@@ -67,11 +71,11 @@ namespace DocumentManager.Api.Services
         {
             try
             {
-                _logger.LogInformation($"Adding Document '{document.Name}' to CosmosDb: '{_container.Database.Id}' container: '{_container.Id}' started");
-
-                await _container.CreateItemAsync(document, new PartitionKey(document.Id));
-
-                _logger.LogInformation($"Adding Document '{document.Name}' to CosmosDb: '{_container.Database.Id}' container: '{_container.Id}' started");
+                using (_logger.BeginScope($"Adding Document '{document.Name}' to CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'"))
+                {
+                    document.Partition = _partitionKey;
+                    await _container.CreateItemAsync(document, new PartitionKey(_partitionKey));
+                }
             }
             catch (CosmosException ex)
             {
@@ -80,21 +84,48 @@ namespace DocumentManager.Api.Services
             }
         }
 
-        public async Task DeleteDocumentAsync(string id)
+        public async Task DeleteDocumentAsync(string id, IReadOnlyCollection<Document> documentsToUpdate)
         {
-            try
+            using (_logger.BeginScope($"Deleting document '{id}' from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'"))
             {
-                _logger.LogInformation($"Deleting document with Id: '{id}' from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}' started");
+                var batch = _container.CreateTransactionalBatch(new PartitionKey(_partitionKey));
 
-                await _container.DeleteItemAsync<Document>(id, new PartitionKey(id));
+                batch.DeleteItem(id);
 
-                _logger.LogInformation($"Deleting document with Id: '{id}' from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}' finished");
+                foreach (var document in documentsToUpdate)
+                    batch.UpsertItem(document);
 
+                using (var batchResponse = await batch.ExecuteAsync())
+                {
+                    if (batchResponse.IsSuccessStatusCode)
+                        _logger.LogInformation($"Document '{id}' was deleted from CosmosDb");
+                    else
+                        _logger.LogError($"Transaction of deleting document '{id}' failed", batchResponse.ErrorMessage);
+                }
             }
-            catch (CosmosException ex)
+        }
+
+        public async Task UpdateDocumentsAsync(IReadOnlyCollection<Document> documentsToUpdate)
+        {
+            if (!documentsToUpdate.Any())
             {
-                _logger.LogError(ex, $"Error of deleting document with Id: '{id}' from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
-                throw ex;
+                _logger.LogWarning("Trying to update empty collection");
+                return;
+            }
+
+            using (_logger.BeginScope($"Updating documents '{string.Join(", ", documentsToUpdate.Select(d => d.Id))}' in CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'"))
+            {
+
+                var batch = _container.CreateTransactionalBatch(new PartitionKey(_partitionKey));
+
+                foreach (var document in documentsToUpdate)
+                    batch.UpsertItem(document);
+
+                using (var batchResponse = await batch.ExecuteAsync())
+                {
+                    if (batchResponse.IsSuccessStatusCode)
+                        _logger.LogError($"Updating transaction failed", batchResponse.ErrorMessage);
+                }
             }
         }
     }

@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using DocumentManager.Api.Helpers;
 using DocumentManager.Api.Options;
 using DocumentManager.Api.Services;
 using Microsoft.AspNetCore.Builder;
@@ -71,9 +70,9 @@ namespace DocumentManager.Api
             var clientBuilder = new Microsoft.Azure.Cosmos.Fluent.CosmosClientBuilder(dbOptions.Endpoint, dbOptions.Key);
             var client = clientBuilder.WithConnectionModeDirect().Build();
             var database = await client.CreateDatabaseIfNotExistsAsync(dbOptions.Database);
-            var response = await database.Database.CreateContainerIfNotExistsAsync(dbOptions.Container, "/id");
+            var response = await database.Database.CreateContainerIfNotExistsAsync(dbOptions.Container, "/partition");
 
-            return new CosmosDbService(response.Container, logger);
+            return new CosmosDbService(response.Container, dbOptions.PartitionKey, logger);
         }
 
         private static async Task<AzureBlobContentService> InitializeAzureBlobServiceInstanceAsync(AzureBlobOptions options, ILogger<AzureBlobContentService> logger)

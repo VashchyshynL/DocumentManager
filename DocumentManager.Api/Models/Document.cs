@@ -14,6 +14,12 @@ namespace DocumentManager.Api.Models
         public string Id { get; set; }
 
         /// <summary>
+        /// Partition key
+        /// </summary>
+        [JsonProperty(PropertyName = "partition")]
+        public string Partition { get; set; }
+
+        /// <summary>
         /// Document name
         /// </summary>
         [JsonProperty(PropertyName = "name")]
@@ -30,5 +36,11 @@ namespace DocumentManager.Api.Models
         /// </summary>
         [JsonProperty(PropertyName = "fileSize")]
         public long FileSize { get; set; }
+
+        /// <summary>
+        /// Position in ordered collection
+        /// </summary>
+        [JsonProperty(PropertyName = "position")]
+        public int Position { get; set; }
     }
 }

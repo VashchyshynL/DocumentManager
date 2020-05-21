@@ -21,17 +21,17 @@ namespace DocumentManager.Api.Services
         {
             try
             {
-                _logger.LogInformation($"Saving file '{fileName}' to Azure Blob Storage container: '{_container.Name}' started");
+                using (_logger.BeginScope($"Saving file '{fileName}' to Azure Blob Storage container: '{_container.Name}'"))
+                {
+                    var blockBlob = _container.GetBlockBlobReference(fileName);
 
-                CloudBlockBlob blockBlob = _container.GetBlockBlobReference(fileName);
+                    await blockBlob.UploadFromStreamAsync(stream);
 
-                await blockBlob.UploadFromStreamAsync(stream);
+                    var location = blockBlob.Uri.ToString();
+                    _logger.LogInformation($"File '{fileName}' successfully stored to Azure Blob Storage location: '{location}'");
 
-                var location = blockBlob.Uri.ToString();
-
-                _logger.LogInformation($"File '{fileName}' successfully stored to Azure Blob Storage location: '{location}'");
-
-                return location;
+                    return location;
+                }
             }
             catch (Exception ex)
             {
@@ -44,12 +44,11 @@ namespace DocumentManager.Api.Services
         {
             try
             {
-                _logger.LogInformation($"Deleting file '{filePath}' from Azure Blob Storage container: '{_container.Name}' started");
-
-                CloudBlockBlob blockBlob = _container.GetBlockBlobReference(filePath);
-                await blockBlob.DeleteIfExistsAsync();
-
-                _logger.LogInformation($"Deleting file '{filePath}' from Azure Blob Storage container: '{_container.Name}' finished");
+                using (_logger.BeginScope($"Deleting file '{filePath}' from Azure Blob Storage container: '{_container.Name}'"))
+                {
+                    CloudBlockBlob blockBlob = _container.GetBlockBlobReference(filePath);
+                    await blockBlob.DeleteIfExistsAsync();
+                }
             }
             catch (Exception ex)
             {

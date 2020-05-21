@@ -10,6 +10,11 @@ namespace DocumentManager.Api.Services
     public interface IDbService
     {
         /// <summary>
+        /// Get documents count
+        /// </summary>
+        int GetDocumentsCount();
+
+        /// <summary>
         /// Get all documents (asynchronously)
         /// </summary>
         /// <returns>Enumeration of documents</returns>
@@ -31,7 +36,14 @@ namespace DocumentManager.Api.Services
         /// <summary>
         /// Delete document from DataBase
         /// </summary>
-        /// <param name="id">Id of the document</param>
-        Task DeleteDocumentAsync(string id);
+        /// <param name="id">Id of the document for deletion</param>
+        /// <param name="documentsToUpdate">Collection of documents affected by deletion</param>
+        Task DeleteDocumentAsync(string id, IReadOnlyCollection<Document> documentsToUpdate);
+
+        /// <summary>
+        /// Update documents (asynchronously)
+        /// </summary>
+        /// <param name="documentsToUpdate">Collection of documents for update</param>
+        Task UpdateDocumentsAsync(IReadOnlyCollection<Document> documentsToUpdate);
     }
 }
