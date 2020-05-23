@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
-using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -32,7 +31,7 @@ namespace DocumentManager.Persistence.Storage
         {
             try
             {
-                using (_logger.BeginScope($"Saving file '{fileName}' to Azure Blob Storage container: '{_container.Name}'"))
+                using (_logger.BeginScope($"Saving '{fileName}' file to Azure Blob Storage container: '{_container.Name}'"))
                 {
                     var blockBlob = _container.GetBlockBlobReference(fileName);
 
@@ -44,9 +43,9 @@ namespace DocumentManager.Persistence.Storage
                     return location;
                 }
             }
-            catch (Exception ex)
+            catch (StorageException ex)
             {
-                _logger.LogError(ex, $"Error during saving file '{fileName}' to Azure Blob Storage container: '{_container.Name}'");
+                _logger.LogError(ex, $"Error during saving '{fileName}' file to Azure Blob Storage container: '{_container.Name}'");
                 throw ex;
             }
         }
@@ -55,15 +54,15 @@ namespace DocumentManager.Persistence.Storage
         {
             try
             {
-                using (_logger.BeginScope($"Deleting file '{filePath}' from Azure Blob Storage container: '{_container.Name}'"))
+                using (_logger.BeginScope($"Deleting '{filePath}' file from Azure Blob Storage container: '{_container.Name}'"))
                 {
                     var blockBlob = _container.GetBlockBlobReference(filePath);
                     await blockBlob.DeleteIfExistsAsync();
                 }
             }
-            catch (Exception ex)
+            catch (StorageException ex)
             {
-                _logger.LogError(ex, $"Error during deleting file '{filePath}' from Azure Blob Storage container: '{_container.Name}'");
+                _logger.LogError(ex, $"Error during deleting '{filePath}' file from Azure Blob Storage container: '{_container.Name}'");
                 throw ex;
             }
         }
