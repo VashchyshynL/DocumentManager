@@ -25,7 +25,7 @@ namespace DocumentManager.Services
             return _documentsRepository.GetDocumentsCount();
         }
 
-        public Task<IEnumerable<Document>> GetDocumentsAsync()
+        public Task<Document[]> GetDocumentsAsync()
         {
             return _documentsRepository.GetDocumentsAsync();
         }
@@ -56,7 +56,7 @@ namespace DocumentManager.Services
 
         public async Task DeleteDocumentAsync(Document document)
         {
-            var allDocuments = (await _documentsRepository.GetDocumentsAsync()).ToArray();
+            var allDocuments = await _documentsRepository.GetDocumentsAsync();
             var documentsToUpdate = GetInsertionAffectedDocuments(allDocuments, document.Position, allDocuments.Length).ToArray();
 
             await _documentsRepository.DeleteDocumentAsync(document.Id, documentsToUpdate);
@@ -65,7 +65,10 @@ namespace DocumentManager.Services
 
         public async Task InsertDocumentToPositionAsync(Document document, int position)
         {
-            var allDocuments = (await _documentsRepository.GetDocumentsAsync()).ToArray();
+            if (document.Position == position)
+                return;
+
+            var allDocuments = await _documentsRepository.GetDocumentsAsync();
             var documentsToUpdate = GetInsertionAffectedDocuments(allDocuments, document.Position, position).ToList();
 
             document.Position = position;

@@ -17,8 +17,8 @@ namespace DocumentManager.Persistence.Repositories
         /// <summary>
         /// Get all documents (asynchronously)
         /// </summary>
-        /// <returns>Enumeration of documents</returns>
-        Task<IEnumerable<Document>> GetDocumentsAsync();
+        /// <returns>Documents collection</returns>
+        Task<Document[]> GetDocumentsAsync();
 
         /// <summary>
         /// Obtain document by its Id (asynchronously)

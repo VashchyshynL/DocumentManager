@@ -33,12 +33,12 @@ namespace DocumentManager.Persistence.Repositories
             }
         }
 
-        public async Task<IEnumerable<Document>> GetDocumentsAsync()
+        public async Task<Document[]> GetDocumentsAsync()
         {
             try
             {
-                return await Task.Factory.StartNew<IEnumerable<Document>>(
-                    () => _container.GetItemLinqQueryable<Document>(true).OrderBy(d => d.Position));
+                return await Task.Factory.StartNew(
+                    () => _container.GetItemLinqQueryable<Document>(true).OrderBy(d => d.Position).ToArray());
             }
             catch (CosmosException ex)
             {

@@ -16,7 +16,7 @@ namespace DocumentManager.Services
         /// Get all documents (asynchronously)
         /// </summary>
         /// <returns>Enumeration of documents</returns>
-        Task<IEnumerable<Document>> GetDocumentsAsync();
+        Task<Document[]> GetDocumentsAsync();
 
         /// <summary>
         /// Obtain document by its Id (asynchronously)
@@ -30,7 +30,7 @@ namespace DocumentManager.Services
         /// </summary>
         /// <param name="fileStream">File stream</param>
         /// <param name="fileName">File name</param>
-        /// <param name="fileSize">File size</param>
+        /// <param name="fileSize">File size in bytes</param>
         Task<Document> SaveDocumentAsync(Stream fileStream, string fileName, long fileSize);
 
         /// <summary>

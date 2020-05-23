@@ -46,7 +46,7 @@ namespace DocumentManager.Persistence.Storage
             {
                 using (_logger.BeginScope($"Deleting file '{filePath}' from Azure Blob Storage container: '{_container.Name}'"))
                 {
-                    CloudBlockBlob blockBlob = _container.GetBlockBlobReference(filePath);
+                    var blockBlob = _container.GetBlockBlobReference(filePath);
                     await blockBlob.DeleteIfExistsAsync();
                 }
             }
