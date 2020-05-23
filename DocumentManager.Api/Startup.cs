@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using DocumentManager.Api.Middleware;
 using DocumentManager.Api.Options;
+using DocumentManager.Api.Settings;
 using DocumentManager.Persistence.Repositories;
 using DocumentManager.Persistence.Storage;
 using DocumentManager.Services;
@@ -54,7 +55,7 @@ namespace DocumentManager.Api
         {
             services.AddSingleton<IDocumentsRepository>(serviceProvider => 
             {
-                var dbOptions = _configuration.GetSection("CosmosDb").Get<DbOptions>();
+                var dbOptions = _configuration.GetSection("CosmosDb").Get<DbSettings>();
                 var repositoryLogger = serviceProvider.GetService<ILogger<DocumentsRepository>>();
 
                 return InitializeCosmosDbServiceInstanceAsync(dbOptions, repositoryLogger).GetAwaiter().GetResult();
@@ -62,7 +63,7 @@ namespace DocumentManager.Api
             
             services.AddSingleton<IContentStorage>(serviceProvider =>
             {
-                var azureBlobOptions = _configuration.GetSection("AzureBlobStorage").Get<AzureBlobOptions>();
+                var azureBlobOptions = _configuration.GetSection("AzureBlobStorage").Get<StorageSettings>();
                 var azureBlobStorageLogger = serviceProvider.GetService<ILogger<AzureBlobContentStorage>>();
 
                 return InitializeAzureBlobServiceInstanceAsync(azureBlobOptions, azureBlobStorageLogger).GetAwaiter().GetResult();
@@ -71,22 +72,22 @@ namespace DocumentManager.Api
             services.AddScoped<IDocumentsService, DocumentsService>();
         }
 
-        private static async Task<DocumentsRepository> InitializeCosmosDbServiceInstanceAsync(DbOptions dbOptions, ILogger<DocumentsRepository> logger)
+        private static async Task<DocumentsRepository> InitializeCosmosDbServiceInstanceAsync(DbSettings dbSettings, ILogger<DocumentsRepository> logger)
         {
-            var clientBuilder = new Microsoft.Azure.Cosmos.Fluent.CosmosClientBuilder(dbOptions.Endpoint, dbOptions.Key);
+            var clientBuilder = new Microsoft.Azure.Cosmos.Fluent.CosmosClientBuilder(dbSettings.Endpoint, dbSettings.Key);
             var client = clientBuilder.WithConnectionModeDirect().Build();
-            var database = await client.CreateDatabaseIfNotExistsAsync(dbOptions.Database);
-            var response = await database.Database.CreateContainerIfNotExistsAsync(dbOptions.Container, "/partition");
+            var database = await client.CreateDatabaseIfNotExistsAsync(dbSettings.Database);
+            var response = await database.Database.CreateContainerIfNotExistsAsync(dbSettings.Container, "/partition");
 
-            return new DocumentsRepository(response.Container, dbOptions.PartitionKey, logger);
+            return new DocumentsRepository(response.Container, dbSettings.PartitionKey, logger);
         }
 
-        private static async Task<AzureBlobContentStorage> InitializeAzureBlobServiceInstanceAsync(AzureBlobOptions options, ILogger<AzureBlobContentStorage> logger)
+        private static async Task<AzureBlobContentStorage> InitializeAzureBlobServiceInstanceAsync(StorageSettings storageSettings, ILogger<AzureBlobContentStorage> logger)
         {
-            var credentials = new StorageCredentials(options.Name, options.Key);
+            var credentials = new StorageCredentials(storageSettings.Name, storageSettings.Key);
             var storageAccount = new CloudStorageAccount(credentials, true);
             var blobClient = storageAccount.CreateCloudBlobClient();
-            var container = blobClient.GetContainerReference(options.Container);
+            var container = blobClient.GetContainerReference(storageSettings.Container);
             await container.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Blob, new BlobRequestOptions(), new OperationContext());
 
             return new AzureBlobContentStorage(container, logger);

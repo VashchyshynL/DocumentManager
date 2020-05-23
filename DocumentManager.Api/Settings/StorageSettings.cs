@@ -1,9 +1,9 @@
-﻿namespace DocumentManager.Api.Options
+﻿namespace DocumentManager.Api.Settings
 {
     /// <summary>
-    /// Configuration options for connecting to Azure Blob Storage
+    /// Storage configuration settings
     /// </summary>
-    public class AzureBlobOptions
+    public class StorageSettings
     {
         /// <summary>
         /// Account name

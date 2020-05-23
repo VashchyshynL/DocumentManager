@@ -1,9 +1,9 @@
 ﻿namespace DocumentManager.Api.Options
 {
     /// <summary>
-    /// DataBase configuration options
+    /// DataBase configuration class
     /// </summary>
-    public class DbOptions
+    public class DbSettings
     {
         /// <summary>
         /// DataBase endpoint
