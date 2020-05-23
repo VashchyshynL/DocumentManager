@@ -1,4 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using DocumentManager.Persistence.Configuration;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
 using System;
 using System.IO;
@@ -11,10 +15,17 @@ namespace DocumentManager.Persistence.Storage
         private readonly CloudBlobContainer _container;
         private readonly ILogger<AzureBlobContentStorage> _logger;
 
-        public AzureBlobContentStorage(CloudBlobContainer container, ILogger<AzureBlobContentStorage> logger)
+        public AzureBlobContentStorage(IConfiguration configuration, ILogger<AzureBlobContentStorage> logger)
         {
-            _container = container;
             _logger = logger;
+
+            var azureBlobSettings = configuration.GetSection("AzureBlobStorage").Get<StorageSettings>();
+
+            var credentials = new StorageCredentials(azureBlobSettings.Name, azureBlobSettings.Key);
+            var storageAccount = new CloudStorageAccount(credentials, true);
+            var blobClient = storageAccount.CreateCloudBlobClient();
+
+            _container = blobClient.GetContainerReference(azureBlobSettings.Container);
         }
 
         public async Task<string> SaveFile(Stream stream, string fileName)

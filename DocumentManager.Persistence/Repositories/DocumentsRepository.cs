@@ -2,22 +2,29 @@
 using System.Linq;
 using System.Threading.Tasks;
 using DocumentManager.Persistence.Models;
+using DocumentManager.Persistence.Configuration;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Azure.Cosmos.Fluent;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace DocumentManager.Persistence.Repositories
 {
     public class DocumentsRepository : IDocumentsRepository
     {
-        private Container _container;
-        private readonly string _partitionKey;
+        private readonly DbSettings _dbSettings;
         private readonly ILogger<DocumentsRepository> _logger;
 
-        public DocumentsRepository(Container container, string partitionKey, ILogger<DocumentsRepository> logger)
+        private Container _container;
+
+        public DocumentsRepository(IConfiguration configuration, ILogger<DocumentsRepository> logger)
         {
-            _container = container;
-            _partitionKey = partitionKey;
+            _dbSettings = configuration.GetSection("CosmosDb").Get<DbSettings>();
             _logger = logger;
+
+            var clientBuilder = new CosmosClientBuilder(_dbSettings.Endpoint, _dbSettings.Key);
+            var client = clientBuilder.WithConnectionModeDirect().Build();
+            _container = client.GetContainer(_dbSettings.Database, _dbSettings.Container);
         }
 
         public int GetDocumentsCount()
@@ -28,7 +35,7 @@ namespace DocumentManager.Persistence.Repositories
             }
             catch (CosmosException ex)
             {
-                _logger.LogError(ex, $"Error of retrieving documents count from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
+                _logger.LogError(ex, $"Error of retrieving documents count from CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'");
                 throw ex;
             }
         }
@@ -42,7 +49,7 @@ namespace DocumentManager.Persistence.Repositories
             }
             catch (CosmosException ex)
             {
-                _logger.LogError(ex, $"Error of retrieving documents from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
+                _logger.LogError(ex, $"Error of retrieving documents from CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'");
                 throw ex;
             }
         }
@@ -51,18 +58,18 @@ namespace DocumentManager.Persistence.Repositories
         {
             try
             {
-                var response = await _container.ReadItemAsync<Document>(id, new PartitionKey(_partitionKey));
+                var response = await _container.ReadItemAsync<Document>(id, new PartitionKey(_dbSettings.PartitionKey));
 
                 return response?.Resource;
             }
             catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                _logger.LogWarning(ex, $"Document '{id}' not found in CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
+                _logger.LogWarning(ex, $"Document '{id}' not found in CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'");
                 return null;
             }
             catch (CosmosException ex)
             {
-                _logger.LogError(ex, $"Error of retrieving document '{id}' from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
+                _logger.LogError(ex, $"Error of retrieving document '{id}' from CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'");
                 throw ex;
             }
         }
@@ -71,26 +78,26 @@ namespace DocumentManager.Persistence.Repositories
         {
             try
             {
-                using (_logger.BeginScope($"Adding Document '{document.Name}' to CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'"))
+                using (_logger.BeginScope($"Adding Document '{document.Name}' to CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'"))
                 {
-                    document.Partition = _partitionKey;
-                    var response = await _container.CreateItemAsync(document, new PartitionKey(_partitionKey));
+                    document.Partition = _dbSettings.PartitionKey;
+                    var response = await _container.CreateItemAsync(document, new PartitionKey(_dbSettings.PartitionKey));
 
                     return response.Resource;
                 }
             }
             catch (CosmosException ex)
             {
-                _logger.LogError(ex, $"Error of adding document '{document.Name}' to CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'");
+                _logger.LogError(ex, $"Error of adding document '{document.Name}' to CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'");
                 throw ex;
             }
         }
 
         public async Task DeleteDocumentAsync(string id, IReadOnlyCollection<Document> documentsToUpdate)
         {
-            using (_logger.BeginScope($"Deleting document '{id}' from CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'"))
+            using (_logger.BeginScope($"Deleting document '{id}' from CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'"))
             {
-                var batch = _container.CreateTransactionalBatch(new PartitionKey(_partitionKey));
+                var batch = _container.CreateTransactionalBatch(new PartitionKey(_dbSettings.PartitionKey));
 
                 batch.DeleteItem(id);
 
@@ -115,10 +122,10 @@ namespace DocumentManager.Persistence.Repositories
                 return;
             }
 
-            using (_logger.BeginScope($"Updating documents '{string.Join(", ", documentsToUpdate.Select(d => d.Id))}' in CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'"))
+            using (_logger.BeginScope($"Updating documents '{string.Join(", ", documentsToUpdate.Select(d => d.Id))}' in CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'"))
             {
 
-                var batch = _container.CreateTransactionalBatch(new PartitionKey(_partitionKey));
+                var batch = _container.CreateTransactionalBatch(new PartitionKey(_dbSettings.PartitionKey));
 
                 foreach (var document in documentsToUpdate)
                     batch.UpsertItem(document);

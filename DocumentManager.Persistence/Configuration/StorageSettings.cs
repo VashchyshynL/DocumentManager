@@ -1,4 +1,4 @@
-﻿namespace DocumentManager.Api.Settings
+﻿namespace DocumentManager.Persistence.Configuration
 {
     /// <summary>
     /// Storage configuration settings

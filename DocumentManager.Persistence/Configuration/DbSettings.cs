@@ -1,4 +1,4 @@
-﻿namespace DocumentManager.Api.Options
+﻿namespace DocumentManager.Persistence.Configuration
 {
     /// <summary>
     /// DataBase configuration class
