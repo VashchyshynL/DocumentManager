@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace DocumentManager.Api.Models
+namespace DocumentManager.Persistence.Models
 {
     /// <summary>
     /// Class for representing document files

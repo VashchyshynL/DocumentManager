@@ -1,12 +1,12 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 
-namespace DocumentManager.Api.Services
+namespace DocumentManager.Persistence.Storage
 {
     /// <summary>
     /// Interface for interaction with content storage
     /// </summary>
-    public interface IContentService
+    public interface IContentStorage
     {
         /// <summary>
         /// Save file to storage

@@ -1,19 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using DocumentManager.Api.Models;
+using DocumentManager.Persistence.Models;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
 
-namespace DocumentManager.Api.Services
+namespace DocumentManager.Persistence.Repositories
 {
-    public class CosmosDbService : IDbService
+    public class DocumentsRepository : IDocumentsRepository
     {
         private Container _container;
         private readonly string _partitionKey;
-        private readonly ILogger<CosmosDbService> _logger;
+        private readonly ILogger<DocumentsRepository> _logger;
 
-        public CosmosDbService(Container container, string partitionKey, ILogger<CosmosDbService> logger)
+        public DocumentsRepository(Container container, string partitionKey, ILogger<DocumentsRepository> logger)
         {
             _container = container;
             _partitionKey = partitionKey;
@@ -67,14 +67,16 @@ namespace DocumentManager.Api.Services
             }
         }
 
-        public async Task AddDocumentAsync(Document document)
+        public async Task<Document> AddDocumentAsync(Document document)
         {
             try
             {
                 using (_logger.BeginScope($"Adding Document '{document.Name}' to CosmosDb: '{_container.Database.Id}' container: '{_container.Id}'"))
                 {
                     document.Partition = _partitionKey;
-                    await _container.CreateItemAsync(document, new PartitionKey(_partitionKey));
+                    var response = await _container.CreateItemAsync(document, new PartitionKey(_partitionKey));
+
+                    return response.Resource;
                 }
             }
             catch (CosmosException ex)

@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentManager.Api", "DocumentManager.Api\DocumentManager.Api.csproj", "{D18AADC1-0387-4B2B-A48F-27A336D50E8C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DocumentManager.Api", "DocumentManager.Api\DocumentManager.Api.csproj", "{D18AADC1-0387-4B2B-A48F-27A336D50E8C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DocumentManager.Persistence", "DocumentManager.Persistence\DocumentManager.Persistence.csproj", "{AC23DD2F-0617-4D18-9E75-01F16D388100}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentManager.Services", "DocumentManager.Services\DocumentManager.Services.csproj", "{4D6F9CBD-F768-4D5E-A3CB-88C5FC238569}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{D18AADC1-0387-4B2B-A48F-27A336D50E8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D18AADC1-0387-4B2B-A48F-27A336D50E8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D18AADC1-0387-4B2B-A48F-27A336D50E8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC23DD2F-0617-4D18-9E75-01F16D388100}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC23DD2F-0617-4D18-9E75-01F16D388100}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC23DD2F-0617-4D18-9E75-01F16D388100}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC23DD2F-0617-4D18-9E75-01F16D388100}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D6F9CBD-F768-4D5E-A3CB-88C5FC238569}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D6F9CBD-F768-4D5E-A3CB-88C5FC238569}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D6F9CBD-F768-4D5E-A3CB-88C5FC238569}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D6F9CBD-F768-4D5E-A3CB-88C5FC238569}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

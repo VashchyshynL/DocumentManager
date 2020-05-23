@@ -1,13 +1,13 @@
-﻿using DocumentManager.Api.Models;
+using DocumentManager.Persistence.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace DocumentManager.Api.Services
+namespace DocumentManager.Persistence.Repositories
 {
     /// <summary>
-    /// Service for interaction with DataBase
+    /// Interface for interaction with documents repository
     /// </summary>
-    public interface IDbService
+    public interface IDocumentsRepository
     {
         /// <summary>
         /// Get documents count
@@ -28,13 +28,14 @@ namespace DocumentManager.Api.Services
         Task<Document> GetDocumentByIdAsync(string id);
 
         /// <summary>
-        /// Add document to DataDase
+        /// Add document to repository
         /// </summary>
         /// <param name="document">Document object</param>
-        Task AddDocumentAsync(Document document);
+        /// <returns>Newly added document</returns>
+        Task<Document> AddDocumentAsync(Document document);
 
         /// <summary>
-        /// Delete document from DataBase
+        /// Delete document from repository
         /// </summary>
         /// <param name="id">Id of the document for deletion</param>
         /// <param name="documentsToUpdate">Collection of documents affected by deletion</param>

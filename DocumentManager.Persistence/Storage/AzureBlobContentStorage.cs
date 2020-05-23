@@ -4,14 +4,14 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace DocumentManager.Api.Services
+namespace DocumentManager.Persistence.Storage
 {
-    public class AzureBlobContentService : IContentService
+    public class AzureBlobContentStorage : IContentStorage
     {
         private readonly CloudBlobContainer _container;
-        private readonly ILogger<AzureBlobContentService> _logger;
+        private readonly ILogger<AzureBlobContentStorage> _logger;
 
-        public AzureBlobContentService(CloudBlobContainer container, ILogger<AzureBlobContentService> logger)
+        public AzureBlobContentStorage(CloudBlobContainer container, ILogger<AzureBlobContentStorage> logger)
         {
             _container = container;
             _logger = logger;

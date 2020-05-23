@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
 using DocumentManager.Api.Middleware;
 using DocumentManager.Api.Options;
-using DocumentManager.Api.Services;
+using DocumentManager.Persistence.Repositories;
+using DocumentManager.Persistence.Storage;
+using DocumentManager.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -50,33 +52,36 @@ namespace DocumentManager.Api
 
         private void RegisterTypes(IServiceCollection services)
         {
-            services.AddSingleton<IDbService>(serviceProvider => {
+            services.AddSingleton<IDocumentsRepository>(serviceProvider => 
+            {
                 var dbOptions = _configuration.GetSection("CosmosDb").Get<DbOptions>();
-                var dbServiceLogger = serviceProvider.GetService<ILogger<CosmosDbService>>();
+                var repositoryLogger = serviceProvider.GetService<ILogger<DocumentsRepository>>();
 
-                return InitializeCosmosDbServiceInstanceAsync(dbOptions, dbServiceLogger).GetAwaiter().GetResult();
+                return InitializeCosmosDbServiceInstanceAsync(dbOptions, repositoryLogger).GetAwaiter().GetResult();
             });
             
-            services.AddSingleton<IContentService>(serviceProvider =>
+            services.AddSingleton<IContentStorage>(serviceProvider =>
             {
                 var azureBlobOptions = _configuration.GetSection("AzureBlobStorage").Get<AzureBlobOptions>();
-                var azureBlobServiceLogger = serviceProvider.GetService<ILogger<AzureBlobContentService>>();
+                var azureBlobStorageLogger = serviceProvider.GetService<ILogger<AzureBlobContentStorage>>();
 
-                return InitializeAzureBlobServiceInstanceAsync(azureBlobOptions, azureBlobServiceLogger).GetAwaiter().GetResult();
+                return InitializeAzureBlobServiceInstanceAsync(azureBlobOptions, azureBlobStorageLogger).GetAwaiter().GetResult();
             });
+
+            services.AddScoped<IDocumentsService, DocumentsService>();
         }
 
-        private static async Task<CosmosDbService> InitializeCosmosDbServiceInstanceAsync(DbOptions dbOptions, ILogger<CosmosDbService> logger)
+        private static async Task<DocumentsRepository> InitializeCosmosDbServiceInstanceAsync(DbOptions dbOptions, ILogger<DocumentsRepository> logger)
         {
             var clientBuilder = new Microsoft.Azure.Cosmos.Fluent.CosmosClientBuilder(dbOptions.Endpoint, dbOptions.Key);
             var client = clientBuilder.WithConnectionModeDirect().Build();
             var database = await client.CreateDatabaseIfNotExistsAsync(dbOptions.Database);
             var response = await database.Database.CreateContainerIfNotExistsAsync(dbOptions.Container, "/partition");
 
-            return new CosmosDbService(response.Container, dbOptions.PartitionKey, logger);
+            return new DocumentsRepository(response.Container, dbOptions.PartitionKey, logger);
         }
 
-        private static async Task<AzureBlobContentService> InitializeAzureBlobServiceInstanceAsync(AzureBlobOptions options, ILogger<AzureBlobContentService> logger)
+        private static async Task<AzureBlobContentStorage> InitializeAzureBlobServiceInstanceAsync(AzureBlobOptions options, ILogger<AzureBlobContentStorage> logger)
         {
             var credentials = new StorageCredentials(options.Name, options.Key);
             var storageAccount = new CloudStorageAccount(credentials, true);
@@ -84,7 +89,7 @@ namespace DocumentManager.Api
             var container = blobClient.GetContainerReference(options.Container);
             await container.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Blob, new BlobRequestOptions(), new OperationContext());
 
-            return new AzureBlobContentService(container, logger);
+            return new AzureBlobContentStorage(container, logger);
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using DocumentManager.Api.Dtos;
-using DocumentManager.Api.Models;
+using DocumentManager.Persistence.Models;
 
 namespace DocumentManager.Api.Mappers
 {
