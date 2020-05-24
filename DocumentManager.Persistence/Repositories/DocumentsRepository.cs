@@ -7,6 +7,8 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using DocumentManager.Persistence.Exceptions;
+using System;
 
 namespace DocumentManager.Persistence.Repositories
 {
@@ -19,12 +21,19 @@ namespace DocumentManager.Persistence.Repositories
 
         public DocumentsRepository(IConfiguration configuration, ILogger<DocumentsRepository> logger)
         {
-            _dbSettings = configuration.GetSection("CosmosDb").Get<DbSettings>();
             _logger = logger;
 
-            var clientBuilder = new CosmosClientBuilder(_dbSettings.Endpoint, _dbSettings.Key);
-            var client = clientBuilder.WithConnectionModeDirect().Build();
-            _container = client.GetContainer(_dbSettings.Database, _dbSettings.Container);
+            try
+            {
+                _dbSettings = configuration.GetSection("CosmosDb").Get<DbSettings>();
+                var clientBuilder = new CosmosClientBuilder(_dbSettings.Endpoint, _dbSettings.Key);
+                var client = clientBuilder.WithConnectionModeDirect().Build();
+                _container = client.GetContainer(_dbSettings.Database, _dbSettings.Container);
+            }
+            catch (Exception ex)
+            {
+                throw CreatePersistenceException("Error of connecting to CosmosDb container", ex);
+            }
         }
 
         public int GetDocumentsCount()
@@ -35,8 +44,7 @@ namespace DocumentManager.Persistence.Repositories
             }
             catch (CosmosException ex)
             {
-                _logger.LogError(ex, $"Error of retrieving documents count from CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'");
-                throw ex;
+                throw CreatePersistenceException($"Error of retrieving documents count from CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'", ex);
             }
         }
 
@@ -49,8 +57,7 @@ namespace DocumentManager.Persistence.Repositories
             }
             catch (CosmosException ex)
             {
-                _logger.LogError(ex, $"Error of retrieving documents from CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'");
-                throw ex;
+                throw CreatePersistenceException($"Error of retrieving documents from CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'", ex);
             }
         }
 
@@ -69,8 +76,7 @@ namespace DocumentManager.Persistence.Repositories
             }
             catch (CosmosException ex)
             {
-                _logger.LogError(ex, $"Error of retrieving document '{id}' from CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'");
-                throw ex;
+                 throw CreatePersistenceException($"Error of retrieving document '{id}' from CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'", ex);
             }
         }
 
@@ -88,8 +94,7 @@ namespace DocumentManager.Persistence.Repositories
             }
             catch (CosmosException ex)
             {
-                _logger.LogError(ex, $"Error of adding document '{document.Name}' to CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'");
-                throw ex;
+                throw CreatePersistenceException($"Error of adding document '{document.Name}' to CosmosDb: '{_dbSettings.Database}' container: '{_container.Id}'", ex);
             }
         }
 
@@ -106,10 +111,10 @@ namespace DocumentManager.Persistence.Repositories
 
                 using (var batchResponse = await batch.ExecuteAsync())
                 {
-                    if (batchResponse.IsSuccessStatusCode)
-                        _logger.LogInformation($"Document '{id}' was deleted from CosmosDb");
-                    else
-                        _logger.LogError($"Transaction of deleting document '{id}' failed", batchResponse.ErrorMessage);
+                    if (!batchResponse.IsSuccessStatusCode)
+                        throw CreatePersistenceException($"Transaction of deleting document '{id}' failed. Details: {batchResponse.ErrorMessage}");
+
+                    _logger.LogInformation($"Document '{id}' was successfully deleted from CosmosDb");
                 }
             }
         }
@@ -118,7 +123,7 @@ namespace DocumentManager.Persistence.Repositories
         {
             if (!documentsToUpdate.Any())
             {
-                _logger.LogWarning("Trying to update empty collection");
+                _logger.LogWarning("Trying to update empty collection of documents");
                 return;
             }
 
@@ -132,10 +137,16 @@ namespace DocumentManager.Persistence.Repositories
 
                 using (var batchResponse = await batch.ExecuteAsync())
                 {
-                    if (batchResponse.IsSuccessStatusCode)
-                        _logger.LogError($"Updating transaction failed", batchResponse.ErrorMessage);
+                    if (!batchResponse.IsSuccessStatusCode)
+                        throw CreatePersistenceException($"Updating transaction failed. Details:{batchResponse.ErrorMessage}");
                 }
             }
+        }
+
+        private PersistenceException CreatePersistenceException(string errorMessage, Exception ex = null)
+        {
+            _logger.LogError(ex, errorMessage);
+            return new PersistenceException(errorMessage, ex);
         }
     }
 }

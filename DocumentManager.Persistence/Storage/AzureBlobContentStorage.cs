@@ -1,9 +1,11 @@
 ﻿using DocumentManager.Persistence.Configuration;
+using DocumentManager.Persistence.Exceptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -18,13 +20,20 @@ namespace DocumentManager.Persistence.Storage
         {
             _logger = logger;
 
-            var azureBlobSettings = configuration.GetSection("AzureBlobStorage").Get<StorageSettings>();
+            try
+            {
+                var azureBlobSettings = configuration.GetSection("AzureBlobStorage").Get<StorageSettings>();
 
-            var credentials = new StorageCredentials(azureBlobSettings.Name, azureBlobSettings.Key);
-            var storageAccount = new CloudStorageAccount(credentials, true);
-            var blobClient = storageAccount.CreateCloudBlobClient();
+                var credentials = new StorageCredentials(azureBlobSettings.Name, azureBlobSettings.Key);
+                var storageAccount = new CloudStorageAccount(credentials, true);
+                var blobClient = storageAccount.CreateCloudBlobClient();
 
-            _container = blobClient.GetContainerReference(azureBlobSettings.Container);
+                _container = blobClient.GetContainerReference(azureBlobSettings.Container);
+            }
+            catch (Exception ex)
+            {
+                throw CreatePersistenceException("Error of connecting to Azure Blob Storage container", ex);
+            }
         }
 
         public async Task<string> SaveFile(Stream stream, string fileName)
@@ -45,26 +54,30 @@ namespace DocumentManager.Persistence.Storage
             }
             catch (StorageException ex)
             {
-                _logger.LogError(ex, $"Error during saving '{fileName}' file to Azure Blob Storage container: '{_container.Name}'");
-                throw ex;
+                throw CreatePersistenceException($"Error during saving '{fileName}' file to Azure Blob Storage container: '{_container.Name}'", ex);
             }
         }
 
-        public async Task DeleteFile(string filePath)
+        public async Task DeleteFile(string fileName)
         {
             try
             {
-                using (_logger.BeginScope($"Deleting '{filePath}' file from Azure Blob Storage container: '{_container.Name}'"))
+                using (_logger.BeginScope($"Deleting '{fileName}' file from Azure Blob Storage container: '{_container.Name}'"))
                 {
-                    var blockBlob = _container.GetBlockBlobReference(filePath);
+                    var blockBlob = _container.GetBlockBlobReference(fileName);
                     await blockBlob.DeleteIfExistsAsync();
                 }
             }
             catch (StorageException ex)
             {
-                _logger.LogError(ex, $"Error during deleting '{filePath}' file from Azure Blob Storage container: '{_container.Name}'");
-                throw ex;
+                throw CreatePersistenceException($"Error during deleting '{fileName}' file from Azure Blob Storage container: '{_container.Name}'", ex);
             }
+        }
+
+        private PersistenceException CreatePersistenceException(string errorMessage, Exception ex)
+        {
+            _logger.LogError(ex, errorMessage);
+            return new PersistenceException(errorMessage, ex);
         }
     }
 }
