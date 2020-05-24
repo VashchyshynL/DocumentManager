@@ -21,7 +21,7 @@ namespace DocumentManager.Api.Validators
 
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
-            if (validationContext.ObjectInstance is IFormFile formFile)
+            if (value is IFormFile formFile)
             {
                 if (formFile.FileName == null || !_extension.Equals(Path.GetExtension(formFile.FileName), StringComparison.InvariantCultureIgnoreCase))
                     return new ValidationResult($"File should have '{_extension}' extension");

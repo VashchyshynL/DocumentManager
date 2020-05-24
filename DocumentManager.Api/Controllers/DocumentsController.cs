@@ -45,11 +45,8 @@ namespace DocumentManager.Api.Controllers
         /// </summary>
         /// <param name="id">Id of the document</param>
         [HttpGet("{id}")]
-        public async Task<ActionResult<DocumentDto>> Get(string id)
+        public async Task<ActionResult<DocumentDto>> Get([Required] string id)
         {
-            if (string.IsNullOrWhiteSpace(id))
-                return BadRequest();
-
             var document = await _documentsService.GetDocumentByIdAsync(id);
             if (document == null)
                 return NotFound();
@@ -63,11 +60,8 @@ namespace DocumentManager.Api.Controllers
         /// <param name="file">Uploading file</param>
         [HttpPost]
         [Route("upload")]
-        public async Task<IActionResult> Upload([PdfFormFile(5)] IFormFile file)
+        public async Task<IActionResult> Upload([Required, PdfFormFile(5)] IFormFile file)
         {
-            if (file == null)
-                return BadRequest();
-
             using (var fileStream = file.OpenReadStream())
             {
                 var document = await _documentsService.SaveDocumentAsync(fileStream, file.FileName, file.Length);
@@ -81,11 +75,8 @@ namespace DocumentManager.Api.Controllers
         /// </summary>
         /// <param name="id">Id of the document</param>
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete([Required] string id)
         {
-            if (string.IsNullOrWhiteSpace(id))
-                return BadRequest();
-
             var document = await _documentsService.GetDocumentByIdAsync(id);
             if (document == null)
                 return NotFound();
@@ -101,23 +92,25 @@ namespace DocumentManager.Api.Controllers
         /// <param name="id">Id of the document<</param>
         /// <param name="position">Position to insert</param>
         [HttpPatch("{id}")]
-        public async Task<IActionResult> InsertToPosition(string id, [FromBody, Range(1, int.MaxValue)] int position)
+        public async Task<IActionResult> InsertToPosition([Required] string id, [FromBody, Range(1, int.MaxValue)] int position)
         {
-            if (string.IsNullOrWhiteSpace(id))
-                return BadRequest();
-
             var document = await _documentsService.GetDocumentByIdAsync(id);
             if (document == null)
                 return NotFound();
 
             if (document.Position == position)
-                return NoContent();
+            {
+                var errorMessage = $"Document '{id}' already placed in position: '{position}'";
+                _logger.LogWarning(errorMessage);
+                return Conflict(errorMessage);
+            }
 
             var documentsCount = _documentsService.GetDocumentsCount();
             if (position > documentsCount)
             {
-                _logger.LogWarning($"Trying to insert document with Id: '{id}' into position: '{position}' (from '{documentsCount}' awailable)");
-                return BadRequest($"Position '{position}' is out of the range of existing documents");
+                var errorMessage = $"Position: '{position}' for document '{id}' is out of the range of awailable (max: {documentsCount})";
+                _logger.LogWarning(errorMessage);
+                return BadRequest(errorMessage);
             }
 
             await _documentsService.InsertDocumentToPositionAsync(document, position);
